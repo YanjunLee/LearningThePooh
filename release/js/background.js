@@ -1,5 +1,14 @@
 let scoreTabId = 0, runningTabId = 0, scoreWindowId = 0, runningWindowId = 0, channelUrls = {}, userId = 0,
     usedUrls = {}, chooseLogin = 0;
+
+// 学习计数
+let articleCount = 0, videoCount = 0;
+// 点点通最大学习数量
+let pptArticleMax = 12, pptVideoMax = 12;
+
+// 保存学习成绩，不要每学文章或视听查询成绩。防止查询次数过多被封。
+let scroe = {};
+
 let windowWidth = 360 + Math.floor(Math.random() * 120);
 let windowHeight = 360 + Math.floor(Math.random() * 120);
 let chromeVersion = (/Chrome\/([0-9]+)/.exec(navigator.userAgent) || [0, 0])[1];
@@ -72,7 +81,7 @@ function getPointsData(callback) {
                             }
                         }
                         if (!isMobile) {
-                            chrome.browserAction.setBadgeText({"text": points.toString()});
+                            chrome.browserAction.setBadgeText({ "text": points.toString() });
                         }
                         if (typeof callback === "function") {
                             callback(res.data);
@@ -87,7 +96,7 @@ function getPointsData(callback) {
                     if (runningWindowId) {
                         closeWindow();
                     }
-                    chrome.tabs.update(scoreTabId, {"active": true, "url": getLoginUrl()});
+                    chrome.tabs.update(scoreTabId, { "active": true, "url": getLoginUrl() });
                 }
             }
         };
@@ -125,7 +134,7 @@ function getChannelData(type, callback) {
     channelArr = channel[type][0].split('|');
 
     if (!isMobile) {
-        chrome.windows.get(runningWindowId, {"populate": true}, function (window) {
+        chrome.windows.get(runningWindowId, { "populate": true }, function (window) {
             if (typeof window !== "undefined") {
                 chrome.tabs.sendMessage(window.tabs[window.tabs.length - 1].id, {
                     "method": "redirect",
@@ -210,14 +219,14 @@ function autoEarnPoints(timeout) {
                 switch (score[key].ruleId) {
                     case 1:
                     case 1002:
-                        if (score[key].currentScore < score[key].dayMaxScore) {
+                        if ((score[key].currentScore < score[key].dayMaxScore) || (articleCount < pptArticleMax)) {
                             type = "article";
                             newTime = 35 * 1000 + Math.floor(Math.random() * 150 * 1000);
                         }
                         break;
                     case 2:
                     case 1003:
-                        if (score[key].currentScore < score[key].dayMaxScore) {
+                        if ((score[key].currentScore < score[key].dayMaxScore) || (videoCount < pptVideoMax)) {
                             type = "video";
                             newTime = 125 * 1000 + Math.floor(Math.random() * 120 * 1000);
                         }
@@ -234,7 +243,7 @@ function autoEarnPoints(timeout) {
 
             if (!isMobile) {
                 if (url && scoreTabId && runningWindowId) {
-                    chrome.windows.get(runningWindowId, {"populate": true}, function (window) {
+                    chrome.windows.get(runningWindowId, { "populate": true }, function (window) {
                         if (typeof window !== "undefined") {
                             chrome.tabs.sendMessage(window.tabs[window.tabs.length - 1].id, {
                                 "method": "redirect",
@@ -321,7 +330,7 @@ function createWindow(url, callback) {
                 "left": 0,
             });
         }
-        chrome.tabs.update(window.tabs[window.tabs.length - 1].id, {"muted": true});
+        chrome.tabs.update(window.tabs[window.tabs.length - 1].id, { "muted": true });
         if (typeof callback === "function") {
             callback(window);
         }
@@ -361,9 +370,9 @@ chrome.browserAction.onClicked.addListener(function (tab) {
         if (!isMobile) {
             if (scoreTabId) {
                 if (runningWindowId) {
-                    chrome.windows.update(runningWindowId, {"focused": true, "state": "normal"});
+                    chrome.windows.update(runningWindowId, { "focused": true, "state": "normal" });
                 } else {
-                    chrome.windows.update(scoreWindowId, {"focused": true, "state": "normal"});
+                    chrome.windows.update(scoreWindowId, { "focused": true, "state": "normal" });
                 }
             } else {
                 channelUrls = {};
@@ -376,14 +385,14 @@ chrome.browserAction.onClicked.addListener(function (tab) {
         } else {
             if (scoreTabId) {
                 if (runningTabId) {
-                    chrome.tabs.update(runningTabId, {"active": true});
+                    chrome.tabs.update(runningTabId, { "active": true });
                 } else {
-                    chrome.tabs.update(scoreTabId, {"active": true});
+                    chrome.tabs.update(scoreTabId, { "active": true });
                 }
             } else {
                 channelUrls = {};
                 chooseLogin = 0;
-                chrome.tabs.create({"url": urlMap.points}, function (tab) {
+                chrome.tabs.create({ "url": urlMap.points }, function (tab) {
                     scoreTabId = tab.id;
                 });
             }
@@ -407,7 +416,7 @@ if (!isMobile) {
             runningWindowId = 0;
         } else if (windowId === scoreWindowId) {
             scoreWindowId = 0;
-            chrome.browserAction.setBadgeText({"text": ""});
+            chrome.browserAction.setBadgeText({ "text": "" });
         }
     });
 }
@@ -459,7 +468,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                                 }
                             }
                             userId = data.userId;
-                            chrome.tabs.create({"url": urlMap.index}, function (tab) {
+                            chrome.tabs.create({ "url": urlMap.index }, function (tab) {
                                 runningTabId = tab.id;
                                 setTimeout(function () {
                                     getChannelData("article", function (list) {
@@ -490,7 +499,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         case "checkLogin":
             if (sender.tab.id === scoreTabId) {
                 if (!chooseLogin) {
-                    chrome.tabs.update(scoreTabId, {"url": getLoginUrl()});
+                    chrome.tabs.update(scoreTabId, { "url": getLoginUrl() });
                 }
             }
             break;
